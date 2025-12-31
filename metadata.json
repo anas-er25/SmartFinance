@@ -1,0 +1,7 @@
+{
+  "name": "SmartFinance",
+  "description": "A voice-powered finance tracker that uses AI to categorize expenses and manage your budget.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
