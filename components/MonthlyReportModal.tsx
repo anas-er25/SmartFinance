@@ -24,7 +24,7 @@ export const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({
   const isRTL = lang === 'ar';
   const currencyConfig = CURRENCIES[currency];
 
-  const years = Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear()))).sort((a,b) => b-a);
+  const years = Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear()))).sort((a: number, b: number) => b - a);
   if (years.length === 0) years.push(new Date().getFullYear());
 
   const months = [

@@ -10,6 +10,21 @@ export interface Transaction {
   isHarmful?: boolean;
   isUnnecessary?: boolean;
   analysisReasoning?: string;
+  loanDetails?: {
+    isLoan: boolean;
+    borrower?: string;
+    repaymentDate?: string;
+    isRepaid?: boolean;
+  };
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  color: string;
+  icon: string;
 }
 
 export type Language = 'en' | 'ar' | 'fr';
@@ -29,6 +44,8 @@ export interface Budget {
 
 export interface AppSettings {
   lowBalanceThreshold: number;
+  monthlySalary?: number;
+  salaryDay?: number;
 }
 
 export const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = {
@@ -70,6 +87,9 @@ export interface ParseResult {
   isHarmful: boolean;
   isUnnecessary: boolean;
   analysisReasoning: string;
+  isLoan?: boolean;
+  borrower?: string;
+  repaymentDate?: string;
 }
 
 export const DICTIONARY = {
@@ -141,7 +161,49 @@ export const DICTIONARY = {
     remaining: "remaining",
     overBudget: "Over Budget",
     lowBalanceThreshold: "Low Balance Threshold",
-    pickIcon: "Icon"
+    pickIcon: "Icon",
+    help: "Help",
+    userGuide: "User Guide",
+    guideVoiceTitle: "Voice Recording",
+    guideVoiceDesc: "Tap the microphone and say 'Spent 50 DH on coffee'. The AI will categorize it.",
+    guideQuickAddTitle: "Quick Add",
+    guideQuickAddDesc: "Use shortcuts for common expenses like coffee or lunch.",
+    guideAnalysisTitle: "Smart Analysis",
+    guideAnalysisDesc: "The app flags unnecessary or harmful spending automatically.",
+    guideBudgetTitle: "Budgets & Icons",
+    guideBudgetDesc: "Set monthly limits and custom icons in Settings.",
+    guideLoansTitle: "Loan Tracking",
+    guideLoansDesc: "Track money lent to friends. Mark them as repaid when you receive the money back.",
+    guideSalaryTitle: "Automatic Salary",
+    guideSalaryDesc: "Set your monthly salary in Settings to be added automatically on a specific day.",
+    gotIt: "Got it!",
+    savingsGoals: "Savings Goals",
+    addGoal: "Add Goal",
+    goalName: "Goal Name",
+    targetAmount: "Target Amount",
+    deposit: "Deposit",
+    withdraw: "Withdraw",
+    congrats: "Goal Reached!",
+    dataManagement: "Data Management",
+    backupData: "Backup Data",
+    restoreData: "Restore Data",
+    backupDesc: "Download a copy of your data.",
+    restoreDesc: "Upload a backup file to restore data.",
+    restoreWarning: "This will overwrite all current data.",
+    fileError: "Invalid file format.",
+    successRestore: "Data restored successfully!",
+    currentSaved: "Saved",
+    lentTo: "Lent to",
+    repaymentDue: "Due",
+    autoSalary: "Automatic Monthly Salary",
+    salaryAmount: "Salary Amount",
+    salaryDay: "Day of Month (1-31)",
+    markRepaid: "Mark Repaid",
+    repaid: "Repaid",
+    confirmRepay: "Has this loan been fully repaid? This will create an income transaction.",
+    repaymentFrom: "Repayment from",
+    activeLoans: "Active Loans",
+    noActiveLoans: "No active loans."
   },
   ar: {
     title: "إدارة الأموال الذكية",
@@ -211,7 +273,49 @@ export const DICTIONARY = {
     remaining: "متبقي",
     overBudget: "تجاوز الميزانية",
     lowBalanceThreshold: "حد انخفاض الرصيد",
-    pickIcon: "أيقونة"
+    pickIcon: "أيقونة",
+    help: "مساعدة",
+    userGuide: "دليل المستخدم",
+    guideVoiceTitle: "التسجيل الصوتي",
+    guideVoiceDesc: "اضغط الميكروفون وقل 'صرفت 50 درهم قهوة'. سيقوم الذكاء الاصطناعي بتصنيفها.",
+    guideQuickAddTitle: "الإضافة السريعة",
+    guideQuickAddDesc: "استخدم الاختصارات للمصاريف المتكررة مثل القهوة أو الغداء.",
+    guideAnalysisTitle: "التحليل الذكي",
+    guideAnalysisDesc: "يقوم التطبيق بتحديد الإنفاق غير الضروري أو الضار تلقائياً.",
+    guideBudgetTitle: "الميزانيات والأيقونات",
+    guideBudgetDesc: "حدد حدوداً شهرية وأيقونات مخصصة في الإعدادات.",
+    guideLoansTitle: "تتبع القروض",
+    guideLoansDesc: "تتبع الأموال التي أقرضتها للأصدقاء. حددها كمدفوعة عند استلام المال.",
+    guideSalaryTitle: "الراتب التلقائي",
+    guideSalaryDesc: "اضبط راتبك الشهري في الإعدادات ليتم إضافته تلقائياً في يوم محدد.",
+    gotIt: "فهمت!",
+    savingsGoals: "أهداف الادخار",
+    addGoal: "إضافة هدف",
+    goalName: "اسم الهدف",
+    targetAmount: "المبلغ المستهدف",
+    deposit: "إيداع",
+    withdraw: "سحب",
+    congrats: "تم تحقيق الهدف!",
+    dataManagement: "إدارة البيانات",
+    backupData: "نسخ احتياطي",
+    restoreData: "استعادة البيانات",
+    backupDesc: "قم بتنزيل نسخة من بياناتك.",
+    restoreDesc: "ارفع ملف النسخة الاحتياطية للاستعادة.",
+    restoreWarning: "سيؤدي هذا إلى استبدال جميع البيانات الحالية.",
+    fileError: "صيغة الملف غير صالحة.",
+    successRestore: "تم استعادة البيانات بنجاح!",
+    currentSaved: "تم توفير",
+    lentTo: "أقرضت لـ",
+    repaymentDue: "يستحق في",
+    autoSalary: "الراتب الشهري التلقائي",
+    salaryAmount: "مبلغ الراتب",
+    salaryDay: "يوم الشهر (1-31)",
+    markRepaid: "تحديد كمدفوع",
+    repaid: "تم السداد",
+    confirmRepay: "هل تم سداد هذا القرض بالكامل؟ سيتم إنشاء معاملة دخل.",
+    repaymentFrom: "سداد من",
+    activeLoans: "القروض النشطة",
+    noActiveLoans: "لا توجد قروض نشطة."
   },
   fr: {
     title: "SmartFinance",
@@ -281,6 +385,48 @@ export const DICTIONARY = {
     remaining: "restant",
     overBudget: "Budget Dépassé",
     lowBalanceThreshold: "Seuil Solde Bas",
-    pickIcon: "Icône"
+    pickIcon: "Icône",
+    help: "Aide",
+    userGuide: "Guide Utilisateur",
+    guideVoiceTitle: "Enregistrement Vocal",
+    guideVoiceDesc: "Appuyez sur le micro et dites '50 DH pour le café'. L'IA le catégorisera.",
+    guideQuickAddTitle: "Ajout Rapide",
+    guideQuickAddDesc: "Utilisez les raccourcis pour les dépenses courantes.",
+    guideAnalysisTitle: "Analyse Intelligente",
+    guideAnalysisDesc: "L'application signale automatiquement les dépenses inutiles ou nuisibles.",
+    guideBudgetTitle: "Budgets & Icônes",
+    guideBudgetDesc: "Définissez des limites mensuelles et des icônes personnalisées dans les paramètres.",
+    guideLoansTitle: "Suivi des Prêts",
+    guideLoansDesc: "Suivez l'argent prêté à des amis. Marquez-les comme remboursés lorsque vous recevez l'argent.",
+    guideSalaryTitle: "Salaire Automatique",
+    guideSalaryDesc: "Définissez votre salaire mensuel dans les paramètres pour qu'il soit ajouté automatiquement.",
+    gotIt: "Compris!",
+    savingsGoals: "Objectifs d'Épargne",
+    addGoal: "Ajouter Objectif",
+    goalName: "Nom de l'Objectif",
+    targetAmount: "Montant Cible",
+    deposit: "Dépôt",
+    withdraw: "Retrait",
+    congrats: "Objectif Atteint!",
+    dataManagement: "Gestion des Données",
+    backupData: "Sauvegarder",
+    restoreData: "Restaurer",
+    backupDesc: "Télécharger une copie de vos données.",
+    restoreDesc: "Uploader un fichier de sauvegarde.",
+    restoreWarning: "Cela écrasera toutes les données actuelles.",
+    fileError: "Format de fichier invalide.",
+    successRestore: "Données restaurées avec succès!",
+    currentSaved: "Épargné",
+    lentTo: "Prêté à",
+    repaymentDue: "Pour le",
+    autoSalary: "Salaire Mensuel Auto",
+    salaryAmount: "Montant Salaire",
+    salaryDay: "Jour du Mois (1-31)",
+    markRepaid: "Marquer comme remboursé",
+    repaid: "Remboursé",
+    confirmRepay: "Ce prêt a-t-il été entièrement remboursé ? Cela créera une transaction de revenu.",
+    repaymentFrom: "Remboursement de",
+    activeLoans: "Prêts Actifs",
+    noActiveLoans: "Aucun prêt actif."
   }
 };

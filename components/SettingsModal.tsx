@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CurrencyCode, CURRENCIES, Language, DICTIONARY, Budget, AppSettings } from '../types';
-import { X, Plus, Trash2, Settings, Target, AlertCircle } from 'lucide-react';
+import { X, Plus, Trash2, Settings, Target, AlertCircle, Database, Upload, Download, CheckCircle, AlertTriangle, Calendar, DollarSign } from 'lucide-react';
 import { AVAILABLE_ICONS, getIconByKey } from '../utils/icons';
+import { db } from '../services/db';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -36,6 +37,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [newCategory, setNewCategory] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('tag');
+  const [restoreStatus, setRestoreStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const t = DICTIONARY[lang];
   const isRTL = lang === 'ar';
   const currencyConfig = CURRENCIES[currency];
@@ -51,6 +55,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setNewCategory('');
       setSelectedIcon('tag');
     }
+  };
+
+  const handleBackup = async () => {
+    const data = await db.system.backup();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `smartfinance_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      if (text) {
+        const success = await db.system.restore(text);
+        if (success) {
+          setRestoreStatus('success');
+          setTimeout(() => window.location.reload(), 1500); // Reload to reflect data
+        } else {
+          setRestoreStatus('error');
+        }
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -109,7 +145,82 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         />
                     </div>
                  </div>
+
+                 {/* Automatic Salary Settings */}
+                 <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                    <h5 className="font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" /> {t.autoSalary}
+                    </h5>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-indigo-700 mb-1">{t.salaryAmount}</label>
+                            <input 
+                                type="number" 
+                                value={settings.monthlySalary || ''}
+                                onChange={(e) => onUpdateSettings({ ...settings, monthlySalary: parseFloat(e.target.value) || 0 })}
+                                placeholder="0.00"
+                                className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-indigo-700 mb-1">{t.salaryDay}</label>
+                            <div className="relative">
+                                <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-indigo-400" />
+                                <input 
+                                    type="number" 
+                                    min="1" max="31"
+                                    value={settings.salaryDay || ''}
+                                    onChange={(e) => onUpdateSettings({ ...settings, salaryDay: Math.min(31, Math.max(1, parseInt(e.target.value) || 1)) })}
+                                    placeholder="1"
+                                    className="w-full pl-7 pr-3 py-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                 </div>
              </div>
+          </section>
+
+          {/* Data Management */}
+          <section className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+             <h4 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                 <Database className="w-4 h-4" /> {t.dataManagement}
+             </h4>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <button onClick={handleBackup} className="flex flex-col items-center justify-center p-4 bg-white border border-slate-200 rounded-xl hover:border-primary hover:text-primary transition-all group">
+                     <Download className="w-6 h-6 mb-2 text-slate-400 group-hover:text-primary" />
+                     <span className="font-semibold text-sm">{t.backupData}</span>
+                     <span className="text-[10px] text-slate-400 text-center mt-1">{t.backupDesc}</span>
+                 </button>
+                 
+                 <div className="relative">
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleRestore} 
+                        className="hidden" 
+                        accept=".json" 
+                    />
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full h-full flex flex-col items-center justify-center p-4 bg-white border border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-500 transition-all group"
+                    >
+                        <Upload className="w-6 h-6 mb-2 text-slate-400 group-hover:text-indigo-500" />
+                        <span className="font-semibold text-sm">{t.restoreData}</span>
+                        <span className="text-[10px] text-slate-400 text-center mt-1">{t.restoreDesc}</span>
+                    </button>
+                 </div>
+             </div>
+             {restoreStatus === 'success' && (
+                 <div className="mt-3 flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded-lg">
+                     <CheckCircle className="w-4 h-4" /> {t.successRestore}
+                 </div>
+             )}
+             {restoreStatus === 'error' && (
+                 <div className="mt-3 flex items-center gap-2 text-sm text-rose-600 bg-rose-50 p-2 rounded-lg">
+                     <AlertTriangle className="w-4 h-4" /> {t.fileError}
+                 </div>
+             )}
           </section>
 
           {/* Categories & Budgets Section */}

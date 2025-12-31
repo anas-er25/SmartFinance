@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode, Budget, AppSettings } from './types';
+import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode, Budget, AppSettings, SavingsGoal } from './types';
 import { parseTransactionText } from './services/geminiService';
 import { exportTransactionsToExcel } from './services/excelService';
 import { createNotificationLinks } from './services/notificationService';
@@ -11,9 +11,12 @@ import { EditModal } from './components/EditModal';
 import { FilterBar } from './components/FilterBar';
 import { SettingsModal } from './components/SettingsModal';
 import { MonthlyReportModal } from './components/MonthlyReportModal';
+import { UserGuideModal } from './components/UserGuideModal';
 import { QuickAdd } from './components/QuickAdd';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
-import { Wallet, TrendingUp, TrendingDown, Download, BadgeDollarSign, Globe, Settings, PieChart, AlertTriangle, MessageCircle, Mail } from 'lucide-react';
+import { SavingsGoals } from './components/SavingsGoals';
+import { ActiveLoans } from './components/ActiveLoans';
+import { Wallet, TrendingUp, TrendingDown, Download, BadgeDollarSign, Globe, Settings, PieChart, AlertTriangle, MessageCircle, Mail, HelpCircle } from 'lucide-react';
 
 export const App: React.FC = () => {
   // --- State ---
@@ -24,6 +27,7 @@ export const App: React.FC = () => {
   const [categoryIcons, setCategoryIcons] = useState<Record<string, string>>({});
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [settings, setSettings] = useState<AppSettings>({ lowBalanceThreshold: 500 });
 
   const [parsingStatus, setParsingStatus] = useState<ParsingStatus>(ParsingStatus.IDLE);
@@ -42,6 +46,7 @@ export const App: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const t = DICTIONARY[language];
@@ -57,12 +62,19 @@ export const App: React.FC = () => {
       const icons = await db.categoryIcons.getAll();
       const bgs = await db.budgets.getAll();
       const stg = await db.settings.get();
+      const gls = await db.goals.getAll();
       
       setTransactions(txs);
       setCategories(cats);
       setCategoryIcons(icons);
       setBudgets(bgs);
       setSettings(stg);
+      setGoals(gls);
+      
+      // Open guide on first visit if no transactions
+      if (txs.length === 0) {
+        setIsGuideModalOpen(true);
+      }
     };
     loadData();
   }, []);
@@ -73,16 +85,18 @@ export const App: React.FC = () => {
     document.documentElement.lang = language;
   }, [language, isRTL]);
 
-  // Recurring Transactions Logic
+  // Recurring Transactions & Auto Salary Logic
   useEffect(() => {
-    if (transactions.length === 0) return;
+    // We run this check even if transactions is empty, provided we have salary settings
+    if (transactions.length === 0 && !settings.monthlySalary) return;
 
-    const checkRecurring = async () => {
+    const checkRecurringAndSalary = async () => {
       const now = new Date();
       let hasChanges = false;
-      const newTransactions: Transaction[] = [];
+      let newTransactions: Transaction[] = [];
       const updatedList = [...transactions];
       
+      // 1. Process standard recurring items
       const updatedTransactions = updatedList.map(t => {
         if (!t.recurrence || t.recurrence === 'none') return t;
         
@@ -119,6 +133,34 @@ export const App: React.FC = () => {
         return t;
       });
 
+      // 2. Process Automatic Monthly Salary
+      if (settings.monthlySalary && settings.salaryDay && now.getDate() >= settings.salaryDay) {
+          const salaryDesc = "Monthly Salary (Auto)";
+          // Check if salary already exists for this month/year
+          const salaryExists = [...transactions, ...newTransactions].some(t => 
+              t.category === 'Salary' &&
+              t.type === 'income' &&
+              new Date(t.date).getMonth() === now.getMonth() && 
+              new Date(t.date).getFullYear() === now.getFullYear()
+          );
+
+          if (!salaryExists) {
+              const salaryTransaction: Transaction = {
+                  id: crypto.randomUUID(),
+                  amount: settings.monthlySalary,
+                  description: salaryDesc,
+                  category: 'Salary',
+                  type: 'income',
+                  date: new Date().toISOString(),
+                  recurrence: 'none',
+                  isHarmful: false,
+                  isUnnecessary: false
+              };
+              newTransactions.push(salaryTransaction);
+              hasChanges = true;
+          }
+      }
+
       if (hasChanges) {
         const finalList = [...newTransactions, ...updatedTransactions];
         setTransactions(finalList);
@@ -126,8 +168,8 @@ export const App: React.FC = () => {
       }
     };
 
-    checkRecurring();
-  }, [transactions.length]); // Check when list length changes
+    checkRecurringAndSalary();
+  }, [transactions.length, settings.monthlySalary, settings.salaryDay]); 
 
   // --- Handlers ---
   const handleProcessInput = async (text: string) => {
@@ -137,7 +179,6 @@ export const App: React.FC = () => {
     const result = await parseTransactionText(text, language);
 
     if (result) {
-      // Auto-add new category if it doesn't exist? 
       if (result.category) {
           const updatedCats = await db.categories.add(result.category);
           setCategories(updatedCats);
@@ -153,7 +194,13 @@ export const App: React.FC = () => {
         recurrence: result.recurrence || 'none',
         isHarmful: result.isHarmful,
         isUnnecessary: result.isUnnecessary,
-        analysisReasoning: result.analysisReasoning
+        analysisReasoning: result.analysisReasoning,
+        loanDetails: result.isLoan ? {
+            isLoan: true,
+            borrower: result.borrower,
+            repaymentDate: result.repaymentDate,
+            isRepaid: false
+        } : undefined
       };
 
       const updatedTxs = await db.transactions.add(newTransaction);
@@ -170,9 +217,13 @@ export const App: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm(t.delete + '?')) {
-      const updated = await db.transactions.delete(id);
-      setTransactions(updated);
+    if (window.confirm(t.delete + '?')) {
+      try {
+        const updated = await db.transactions.delete(id);
+        setTransactions(updated);
+      } catch (e) {
+        console.error("Failed to delete transaction", e);
+      }
     }
   };
 
@@ -188,6 +239,39 @@ export const App: React.FC = () => {
     }
     const updatedList = await db.transactions.update(updated);
     setTransactions(updatedList);
+  };
+
+  const handleRepayLoan = async (transaction: Transaction) => {
+      if (!transaction.loanDetails) return;
+      if (window.confirm(t.confirmRepay)) {
+          // 1. Mark original loan as repaid
+          const updatedTx: Transaction = {
+              ...transaction,
+              loanDetails: {
+                  ...transaction.loanDetails,
+                  isRepaid: true
+              }
+          };
+          
+          await db.transactions.update(updatedTx);
+          
+          // 2. Create repayment income
+          const repaymentTx: Transaction = {
+              id: crypto.randomUUID(),
+              amount: transaction.amount,
+              description: `${t.repaymentFrom} ${transaction.loanDetails.borrower}`,
+              category: 'Loans',
+              type: 'income',
+              date: new Date().toISOString(),
+              recurrence: 'none',
+              isHarmful: false,
+              isUnnecessary: false
+          };
+          
+          // We fetch fresh to ensure we have the update
+          const updatedList = await db.transactions.add(repaymentTx);
+          setTransactions(updatedList);
+      }
   };
 
   const toggleLanguage = () => {
@@ -218,6 +302,41 @@ export const App: React.FC = () => {
   const handleUpdateSettings = async (newSettings: AppSettings) => {
     await db.settings.save(newSettings);
     setSettings(newSettings);
+  };
+
+  const handleAddGoal = async (goal: SavingsGoal) => {
+      const updated = await db.goals.add(goal);
+      setGoals(updated);
+  };
+
+  const handleUpdateGoal = async (goal: SavingsGoal, amountAdded: number) => {
+      // 1. Update the goal object
+      const updatedGoals = await db.goals.update(goal);
+      setGoals(updatedGoals);
+
+      // 2. If money was added (deposit), create a transaction expense
+      if (amountAdded > 0) {
+          const newTransaction: Transaction = {
+              id: crypto.randomUUID(),
+              amount: amountAdded,
+              description: `${t.deposit}: ${goal.name}`,
+              category: 'Savings',
+              type: 'expense',
+              date: new Date().toISOString(),
+              recurrence: 'none',
+              isHarmful: false,
+              isUnnecessary: false
+          };
+          const updatedTxs = await db.transactions.add(newTransaction);
+          setTransactions(updatedTxs);
+      }
+  };
+
+  const handleDeleteGoal = async (id: string) => {
+      if(window.confirm(t.delete + '?')) {
+          const updated = await db.goals.delete(id);
+          setGoals(updated);
+      }
   };
 
   // --- Derived State (Filtering) ---
@@ -283,6 +402,13 @@ export const App: React.FC = () => {
             >
               <Globe className="w-4 h-4" />
               <span>{language}</span>
+            </button>
+            <button
+                onClick={() => setIsGuideModalOpen(true)}
+                className="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-lg transition-colors"
+                title={t.help}
+            >
+                <HelpCircle className="w-5 h-5" />
             </button>
             <button
                 onClick={() => setIsSettingsModalOpen(true)}
@@ -391,6 +517,25 @@ export const App: React.FC = () => {
             />
         )}
 
+        {/* Savings Goals */}
+        <SavingsGoals 
+            goals={goals} 
+            onAddGoal={handleAddGoal} 
+            onUpdateGoal={handleUpdateGoal} 
+            onDeleteGoal={handleDeleteGoal}
+            lang={language}
+            currency={currency}
+        />
+
+        {/* Active Loans */}
+        <ActiveLoans 
+            transactions={transactions}
+            onRepay={handleRepayLoan}
+            onDelete={handleDelete}
+            lang={language}
+            currency={currency}
+        />
+
         {/* Input Area + Quick Add */}
         <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 mb-8 sticky top-6 z-20" dir={isRTL ? 'rtl' : 'ltr'}>
             <QuickAdd onQuickAdd={handleProcessInput} lang={language} />
@@ -418,6 +563,7 @@ export const App: React.FC = () => {
           transactions={filteredTransactions} 
           onDelete={handleDelete}
           onEdit={openEditModal}
+          onRepay={handleRepayLoan}
           lang={language}
           currency={currency}
           categoryIcons={categoryIcons}
@@ -456,6 +602,12 @@ export const App: React.FC = () => {
         transactions={transactions}
         lang={language}
         currency={currency}
+      />
+
+      <UserGuideModal
+        isOpen={isGuideModalOpen}
+        onClose={() => setIsGuideModalOpen(false)}
+        lang={language}
       />
     </div>
   );

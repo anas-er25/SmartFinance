@@ -1,18 +1,19 @@
 import React from 'react';
 import { Transaction, Language, DICTIONARY, CurrencyCode, CURRENCIES } from '../types';
-import { ArrowDownLeft, ArrowUpRight, Trash2, Edit2, RefreshCw, Layers, AlertTriangle, PiggyBank } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Trash2, Edit2, RefreshCw, Layers, AlertTriangle, PiggyBank, HandCoins, CalendarClock, CheckCircle } from 'lucide-react';
 import { getIconByKey } from '../utils/icons';
 
 interface TransactionListProps {
   transactions: Transaction[];
   onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
+  onRepay?: (transaction: Transaction) => void;
   lang: Language;
   currency: CurrencyCode;
   categoryIcons: Record<string, string>;
 }
 
-export const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelete, onEdit, lang, currency, categoryIcons }) => {
+export const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelete, onEdit, onRepay, lang, currency, categoryIcons }) => {
   const t = DICTIONARY[lang];
   const isRTL = lang === 'ar';
   const currencyConfig = CURRENCIES[currency];
@@ -56,8 +57,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
           <tbody className="divide-y divide-slate-50">
             {transactions.map((tItem) => {
               const CategoryIcon = getIconByKey(categoryIcons[tItem.category]);
+              const isLoan = tItem.loanDetails?.isLoan;
+              const isRepaid = tItem.loanDetails?.isRepaid;
+              const isOverdue = !isRepaid && tItem.loanDetails?.repaymentDate && new Date(tItem.loanDetails.repaymentDate) < new Date();
+              
               return (
-              <tr key={tItem.id} className="hover:bg-slate-50 transition-colors group">
+              <tr key={tItem.id} className={`hover:bg-slate-50 transition-colors group ${isRepaid ? 'opacity-60 bg-slate-50/50' : ''}`}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className={`p-2 rounded-full ${isRTL ? 'ml-3' : 'mr-3'} ${tItem.type === 'income' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
@@ -69,7 +74,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-700">{tItem.description}</span>
+                            <span className={`font-medium text-slate-700 ${isRepaid ? 'line-through text-slate-400' : ''}`}>{tItem.description}</span>
                             {tItem.recurrence && tItem.recurrence !== 'none' && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center gap-1" title={`Repeats ${tItem.recurrence}`}>
                                     <RefreshCw className="w-3 h-3" />
@@ -86,7 +91,30 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                                     <PiggyBank className="w-4 h-4" />
                                 </span>
                             )}
+                            {/* Loan Icon */}
+                            {isLoan && (
+                                <span className="text-blue-500 flex items-center gap-1" title={t.lentTo + " " + tItem.loanDetails?.borrower}>
+                                    <HandCoins className="w-4 h-4" />
+                                </span>
+                            )}
                         </div>
+                        {isLoan && (
+                            <div className="text-xs mt-1 flex items-center gap-2">
+                                <span className="text-blue-600">{t.lentTo}: {tItem.loanDetails?.borrower}</span>
+                                {isRepaid ? (
+                                    <span className="flex items-center gap-0.5 px-1 rounded bg-green-100 text-green-700 font-medium">
+                                        <CheckCircle className="w-3 h-3" /> {t.repaid}
+                                    </span>
+                                ) : (
+                                    tItem.loanDetails?.repaymentDate && (
+                                        <span className={`flex items-center gap-0.5 px-1 rounded ${isOverdue ? 'bg-rose-100 text-rose-600 font-bold' : 'bg-blue-50 text-blue-500'}`}>
+                                            <CalendarClock className="w-3 h-3" />
+                                            {t.repaymentDue}: {new Date(tItem.loanDetails.repaymentDate).toLocaleDateString()}
+                                        </span>
+                                    )
+                                )}
+                            </div>
+                        )}
                     </div>
                   </div>
                 </td>
@@ -106,20 +134,37 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex justify-center gap-1">
+                    {/* Repay Button for Loans */}
+                    {isLoan && !isRepaid && onRepay && (
+                        <button
+                          onClick={(e) => {
+                              e.stopPropagation();
+                              onRepay(tItem);
+                          }}
+                          className="text-slate-400 hover:text-green-600 transition-colors p-1.5 hover:bg-green-50 rounded-md"
+                          title={t.markRepaid}
+                        >
+                          <CheckCircle className="w-4 h-4 pointer-events-none" />
+                        </button>
+                    )}
+                    
                     <button
                       onClick={() => onEdit(tItem)}
                       className="text-slate-400 hover:text-primary transition-colors p-1.5 hover:bg-slate-100 rounded-md"
                       title={t.update}
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-4 h-4 pointer-events-none" />
                     </button>
                     <button
-                      onClick={() => onDelete(tItem.id)}
-                      className="text-slate-400 hover:text-rose-500 transition-colors p-1.5 hover:bg-slate-100 rounded-md"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(tItem.id);
+                      }}
+                      className="text-slate-400 hover:text-rose-500 transition-colors p-1.5 hover:bg-slate-100 rounded-md cursor-pointer"
                       title={t.delete}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 pointer-events-none" />
                     </button>
                   </div>
                 </td>

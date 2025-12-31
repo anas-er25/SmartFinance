@@ -17,8 +17,9 @@ export const parseTransactionText = async (text: string, language: Language): Pr
       Rules:
       1. Extract the amount.
       2. Extract a short description in the same language as the input.
-      3. Infer a specific category (e.g., Food, Transport, Salary, Utilities, Health, Entertainment) in English.
+      3. Infer a specific category (e.g., Food, Transport, Salary, Utilities, Health, Entertainment, Loans) in English.
       4. Determine 'income' (salary, freelance, sold item) or 'expense'. Default to 'expense'.
+         - Note: Lending money is an 'expense' (money leaving wallet), receiving money is 'income'.
       5. If no description is provided, use 'General'.
       
       Advanced Analysis Rules:
@@ -32,11 +33,16 @@ export const parseTransactionText = async (text: string, language: Language): Pr
          - 'Subscription': Recurring entertainment services (Netflix, Spotify) if not essential.
       
       8. 'analysisReasoning': Provide a concise reason (max 10 words).
-         - Examples: "Health risk (Tobacco)", "Gambling risk", "Luxury item", "Subscription service".
       
       9. 'Recurrence': Detect if the user mentions repetition.
          - Keywords: "monthly", "every month", "weekly", "daily", "every week".
          - Return enum: 'daily', 'weekly', 'monthly', or 'none'.
+
+      10. 'Lending/Debt': Detect if the user is lending money.
+         - If user says "Lent 500 to Ahmed" or "Gave 200 to John to return later".
+         - Set 'isLoan' to true.
+         - Extract 'borrower' name.
+         - Extract 'repaymentDate' if specified (return as ISO string or simplified date string).
       `,
       config: {
         responseMimeType: "application/json",
@@ -50,7 +56,10 @@ export const parseTransactionText = async (text: string, language: Language): Pr
             recurrence: { type: Type.STRING, enum: ["none", "daily", "weekly", "monthly"] },
             isHarmful: { type: Type.BOOLEAN },
             isUnnecessary: { type: Type.BOOLEAN },
-            analysisReasoning: { type: Type.STRING }
+            analysisReasoning: { type: Type.STRING },
+            isLoan: { type: Type.BOOLEAN },
+            borrower: { type: Type.STRING },
+            repaymentDate: { type: Type.STRING }
           },
           required: ["amount", "description", "category", "type", "isHarmful", "isUnnecessary", "analysisReasoning"]
         }
