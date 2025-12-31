@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode, Budget, AppSettings, SavingsGoal } from './types';
-import { parseTransactionText } from './services/geminiService';
+import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode, Budget, AppSettings, SavingsGoal, ParseResult } from './types';
+import { parseTransactionText, parseTransactionImage } from './services/geminiService';
 import { exportTransactionsToExcel } from './services/excelService';
 import { createNotificationLinks } from './services/notificationService';
 import { db } from './services/db';
@@ -171,14 +171,8 @@ export const App: React.FC = () => {
     checkRecurringAndSalary();
   }, [transactions.length, settings.monthlySalary, settings.salaryDay]); 
 
-  // --- Handlers ---
-  const handleProcessInput = async (text: string) => {
-    setParsingStatus(ParsingStatus.PROCESSING);
-    setErrorMsg(null);
-
-    const result = await parseTransactionText(text, language);
-
-    if (result) {
+  // --- Helpers ---
+  const addTransactionFromParseResult = async (result: ParseResult) => {
       if (result.category) {
           const updatedCats = await db.categories.add(result.category);
           setCategories(updatedCats);
@@ -205,12 +199,40 @@ export const App: React.FC = () => {
 
       const updatedTxs = await db.transactions.add(newTransaction);
       setTransactions(updatedTxs);
-      
+  };
+
+  // --- Handlers ---
+  const handleProcessInput = async (text: string) => {
+    setParsingStatus(ParsingStatus.PROCESSING);
+    setErrorMsg(null);
+
+    const result = await parseTransactionText(text, language);
+
+    if (result) {
+      await addTransactionFromParseResult(result);
       setParsingStatus(ParsingStatus.SUCCESS);
-      
       setTimeout(() => setParsingStatus(ParsingStatus.IDLE), 2000);
     } else {
       setErrorMsg(language === 'ar' ? "لم نتمكن من فهم المعاملة." : "Could not understand that transaction.");
+      setParsingStatus(ParsingStatus.ERROR);
+      setTimeout(() => setParsingStatus(ParsingStatus.IDLE), 3000);
+    }
+  };
+
+  const handleImageInput = async (base64: string, mimeType: string) => {
+    setParsingStatus(ParsingStatus.PROCESSING);
+    setErrorMsg(null);
+
+    const results = await parseTransactionImage(base64, mimeType, language);
+
+    if (results && results.length > 0) {
+      for (const result of results) {
+        await addTransactionFromParseResult(result);
+      }
+      setParsingStatus(ParsingStatus.SUCCESS);
+      setTimeout(() => setParsingStatus(ParsingStatus.IDLE), 2000);
+    } else {
+      setErrorMsg(language === 'ar' ? "لم نتمكن من تحليل الصورة." : "Could not analyze the image.");
       setParsingStatus(ParsingStatus.ERROR);
       setTimeout(() => setParsingStatus(ParsingStatus.IDLE), 3000);
     }
@@ -539,7 +561,12 @@ export const App: React.FC = () => {
         {/* Input Area + Quick Add */}
         <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 mb-8 sticky top-6 z-20" dir={isRTL ? 'rtl' : 'ltr'}>
             <QuickAdd onQuickAdd={handleProcessInput} lang={language} />
-            <InputArea onProcess={handleProcessInput} status={parsingStatus} lang={language} />
+            <InputArea 
+                onProcess={handleProcessInput} 
+                onImageProcess={handleImageInput} 
+                status={parsingStatus} 
+                lang={language} 
+            />
         </div>
 
         {/* Error Message Toast */}
