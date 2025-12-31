@@ -22,6 +22,15 @@ export interface CurrencyConfig {
   position: 'prefix' | 'suffix';
 }
 
+export interface Budget {
+  category: string;
+  limit: number;
+}
+
+export interface AppSettings {
+  lowBalanceThreshold: number;
+}
+
 export const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = {
   MAD: { code: 'MAD', symbol: 'DH', position: 'suffix' },
   USD: { code: 'USD', symbol: '$', position: 'prefix' },
@@ -57,6 +66,7 @@ export interface ParseResult {
   description: string;
   category: string;
   type: 'income' | 'expense';
+  recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   isHarmful: boolean;
   isUnnecessary: boolean;
   analysisReasoning: string;
@@ -110,7 +120,7 @@ export const DICTIONARY = {
     monthly: "Monthly",
     none: "None",
     lowBalance: "Low Balance Warning!",
-    lowBalanceMsg: "Your balance is below 500. Notify someone?",
+    lowBalanceMsg: "Your balance is below limit. Notify someone?",
     sendWhatsapp: "WhatsApp",
     sendEmail: "Email",
     monthlyReport: "Monthly Report",
@@ -122,7 +132,16 @@ export const DICTIONARY = {
     harmful: "Harmful",
     reportFor: "Report for",
     close: "Close",
-    analysis: "Spending Analysis"
+    analysis: "Spending Analysis",
+    quickAdd: "Quick Add",
+    spendingTrends: "Spending Trends",
+    budgetStatus: "Budget Status",
+    topCategories: "Top Categories",
+    setBudget: "Set Monthly Budget",
+    remaining: "remaining",
+    overBudget: "Over Budget",
+    lowBalanceThreshold: "Low Balance Threshold",
+    pickIcon: "Icon"
   },
   ar: {
     title: "إدارة الأموال الذكية",
@@ -171,7 +190,7 @@ export const DICTIONARY = {
     monthly: "شهري",
     none: "لا يوجد",
     lowBalance: "تنبيه انخفاض الرصيد!",
-    lowBalanceMsg: "رصيدك أقل من 500. هل تود إرسال تنبيه؟",
+    lowBalanceMsg: "رصيدك أقل من الحد. هل تود إرسال تنبيه؟",
     sendWhatsapp: "واتساب",
     sendEmail: "بريد إلكتروني",
     monthlyReport: "التقرير الشهري",
@@ -183,7 +202,16 @@ export const DICTIONARY = {
     harmful: "ضار",
     reportFor: "تقرير شهر",
     close: "إغلاق",
-    analysis: "تحليل الإنفاق"
+    analysis: "تحليل الإنفاق",
+    quickAdd: "إضافة سريعة",
+    spendingTrends: "اتجاهات الإنفاق",
+    budgetStatus: "حالة الميزانية",
+    topCategories: "أعلى الفئات",
+    setBudget: "تحديد ميزانية شهرية",
+    remaining: "متبقي",
+    overBudget: "تجاوز الميزانية",
+    lowBalanceThreshold: "حد انخفاض الرصيد",
+    pickIcon: "أيقونة"
   },
   fr: {
     title: "SmartFinance",
@@ -232,7 +260,7 @@ export const DICTIONARY = {
     monthly: "Mensuel",
     none: "Aucun",
     lowBalance: "Attention Solde Bas!",
-    lowBalanceMsg: "Votre solde est inférieur à 500. Notifier quelqu'un?",
+    lowBalanceMsg: "Votre solde est inférieur à la limite. Notifier quelqu'un?",
     sendWhatsapp: "WhatsApp",
     sendEmail: "Email",
     monthlyReport: "Rapport Mensuel",
@@ -244,6 +272,15 @@ export const DICTIONARY = {
     harmful: "Nocif",
     reportFor: "Rapport pour",
     close: "Fermer",
-    analysis: "Analyse des dépenses"
+    analysis: "Analyse des dépenses",
+    quickAdd: "Ajout Rapide",
+    spendingTrends: "Tendances des dépenses",
+    budgetStatus: "État du Budget",
+    topCategories: "Top Catégories",
+    setBudget: "Définir Budget Mensuel",
+    remaining: "restant",
+    overBudget: "Budget Dépassé",
+    lowBalanceThreshold: "Seuil Solde Bas",
+    pickIcon: "Icône"
   }
 };

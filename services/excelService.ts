@@ -7,7 +7,10 @@ export const exportTransactionsToExcel = (transactions: Transaction[]) => {
     Type: t.type,
     Category: t.category,
     Description: t.description,
-    Amount: t.amount
+    Amount: t.amount,
+    'Is Harmful': t.isHarmful ? 'Yes' : 'No',
+    'Is Unnecessary': t.isUnnecessary ? 'Yes' : 'No',
+    'Analysis Reasoning': t.analysisReasoning || ''
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);

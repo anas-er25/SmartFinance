@@ -42,7 +42,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onProcess, status, lang })
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 mb-8 sticky top-6 z-20" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div dir={isRTL ? 'rtl' : 'ltr'}>
       <label className="block text-sm font-medium text-slate-700 mb-2">
         {t.recordTransaction}
       </label>

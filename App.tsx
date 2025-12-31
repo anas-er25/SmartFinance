@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode } from './types';
+import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode, Budget, AppSettings } from './types';
 import { parseTransactionText } from './services/geminiService';
 import { exportTransactionsToExcel } from './services/excelService';
 import { createNotificationLinks } from './services/notificationService';
@@ -11,7 +11,9 @@ import { EditModal } from './components/EditModal';
 import { FilterBar } from './components/FilterBar';
 import { SettingsModal } from './components/SettingsModal';
 import { MonthlyReportModal } from './components/MonthlyReportModal';
-import { Wallet, TrendingUp, TrendingDown, Download, BadgeDollarSign, Globe, Settings, FileText, AlertTriangle, MessageCircle, Mail, PieChart } from 'lucide-react';
+import { QuickAdd } from './components/QuickAdd';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { Wallet, TrendingUp, TrendingDown, Download, BadgeDollarSign, Globe, Settings, PieChart, AlertTriangle, MessageCircle, Mail } from 'lucide-react';
 
 export const App: React.FC = () => {
   // --- State ---
@@ -19,7 +21,10 @@ export const App: React.FC = () => {
   const [currency, setCurrency] = useState<CurrencyCode>('MAD');
   
   const [categories, setCategories] = useState<string[]>([]);
+  const [categoryIcons, setCategoryIcons] = useState<Record<string, string>>({});
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [settings, setSettings] = useState<AppSettings>({ lowBalanceThreshold: 500 });
 
   const [parsingStatus, setParsingStatus] = useState<ParsingStatus>(ParsingStatus.IDLE);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -49,8 +54,15 @@ export const App: React.FC = () => {
     const loadData = async () => {
       const txs = await db.transactions.getAll();
       const cats = await db.categories.getAll();
+      const icons = await db.categoryIcons.getAll();
+      const bgs = await db.budgets.getAll();
+      const stg = await db.settings.get();
+      
       setTransactions(txs);
       setCategories(cats);
+      setCategoryIcons(icons);
+      setBudgets(bgs);
+      setSettings(stg);
     };
     loadData();
   }, []);
@@ -138,7 +150,7 @@ export const App: React.FC = () => {
         category: result.category,
         type: result.type,
         date: new Date().toISOString(),
-        recurrence: 'none',
+        recurrence: result.recurrence || 'none',
         isHarmful: result.isHarmful,
         isUnnecessary: result.isUnnecessary,
         analysisReasoning: result.analysisReasoning
@@ -186,14 +198,26 @@ export const App: React.FC = () => {
     });
   };
 
-  const handleAddCategory = async (cat: string) => {
-    const updated = await db.categories.add(cat);
-    setCategories(updated);
+  const handleAddCategory = async (cat: string, iconKey: string) => {
+    const updatedCats = await db.categories.add(cat);
+    const updatedIcons = await db.categoryIcons.set(cat, iconKey);
+    setCategories(updatedCats);
+    setCategoryIcons(updatedIcons);
   };
 
   const handleRemoveCategory = async (cat: string) => {
     const updated = await db.categories.delete(cat);
     setCategories(updated);
+  };
+
+  const handleSetBudget = async (category: string, amount: number) => {
+    const updated = await db.budgets.set(category, amount);
+    setBudgets(updated);
+  };
+
+  const handleUpdateSettings = async (newSettings: AppSettings) => {
+    await db.settings.save(newSettings);
+    setSettings(newSettings);
   };
 
   // --- Derived State (Filtering) ---
@@ -237,7 +261,7 @@ export const App: React.FC = () => {
 
   // Notification Links (Now includes recent bad items)
   const { waUrl, mailUrl } = createNotificationLinks(currentBalance, currency, filteredTransactions);
-  const showLowBalanceWarning = currentBalance < 500 && transactions.length > 0;
+  const showLowBalanceWarning = currentBalance < settings.lowBalanceThreshold && transactions.length > 0;
 
   return (
     <div className={`min-h-screen pb-12 bg-slate-50 font-sans ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -357,8 +381,21 @@ export const App: React.FC = () => {
           />
         </div>
 
-        {/* Input Area */}
-        <InputArea onProcess={handleProcessInput} status={parsingStatus} lang={language} />
+        {/* Analytics & Budget Dashboard */}
+        {transactions.length > 0 && (
+            <AnalyticsDashboard 
+                transactions={transactions} 
+                budgets={budgets} 
+                lang={language}
+                currency={currency}
+            />
+        )}
+
+        {/* Input Area + Quick Add */}
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 mb-8 sticky top-6 z-20" dir={isRTL ? 'rtl' : 'ltr'}>
+            <QuickAdd onQuickAdd={handleProcessInput} lang={language} />
+            <InputArea onProcess={handleProcessInput} status={parsingStatus} lang={language} />
+        </div>
 
         {/* Error Message Toast */}
         {errorMsg && (
@@ -383,6 +420,7 @@ export const App: React.FC = () => {
           onEdit={openEditModal}
           lang={language}
           currency={currency}
+          categoryIcons={categoryIcons}
         />
       </main>
 
@@ -405,6 +443,11 @@ export const App: React.FC = () => {
         categories={categories}
         onAddCategory={handleAddCategory}
         onRemoveCategory={handleRemoveCategory}
+        budgets={budgets}
+        onSetBudget={handleSetBudget}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
+        categoryIcons={categoryIcons}
       />
 
       <MonthlyReportModal 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Transaction, Language, DICTIONARY, CurrencyCode, CURRENCIES } from '../types';
 import { ArrowDownLeft, ArrowUpRight, Trash2, Edit2, RefreshCw, Layers, AlertTriangle, PiggyBank } from 'lucide-react';
+import { getIconByKey } from '../utils/icons';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -8,9 +9,10 @@ interface TransactionListProps {
   onEdit: (transaction: Transaction) => void;
   lang: Language;
   currency: CurrencyCode;
+  categoryIcons: Record<string, string>;
 }
 
-export const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelete, onEdit, lang, currency }) => {
+export const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelete, onEdit, lang, currency, categoryIcons }) => {
   const t = DICTIONARY[lang];
   const isRTL = lang === 'ar';
   const currencyConfig = CURRENCIES[currency];
@@ -52,7 +54,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {transactions.map((tItem) => (
+            {transactions.map((tItem) => {
+              const CategoryIcon = getIconByKey(categoryIcons[tItem.category]);
+              return (
               <tr key={tItem.id} className="hover:bg-slate-50 transition-colors group">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -87,7 +91,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                  <span className="flex items-center w-fit gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                    <CategoryIcon className="w-3 h-3 text-slate-500" />
                     {tItem.category}
                   </span>
                 </td>
@@ -119,7 +124,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                   </div>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

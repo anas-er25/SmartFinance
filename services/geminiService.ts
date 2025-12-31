@@ -15,15 +15,28 @@ export const parseTransactionText = async (text: string, language: Language): Pr
       Default Currency: Moroccan Dirham (DH/MAD).
       
       Rules:
-      1. Extract the amount. Ignore currency symbols unless they indicate a specific conversion is needed (but just return the number).
+      1. Extract the amount.
       2. Extract a short description in the same language as the input.
-      3. Infer a specific category (e.g., Food, Transport, Salary, Utilities, Health, Entertainment) in English (to match system keys) or the input language if appropriate, but standardizing on English capitalized keys is preferred for the system.
-      4. Determine if it is 'income' (salary, received) or 'expense' (spent, paid).
-      5. If the type is ambiguous, default to 'expense'.
-      6. If no description is provided, use 'General'.
-      7. ANALYZE: Is this expense 'harmful' to health? (e.g. cigarettes, alcohol, excessive junk food, shisha). Set isHarmful to true.
-      8. ANALYZE: Is this expense 'unnecessary' or a 'want' rather than a 'need'? (e.g. luxury items, impulse buys, games, high-end clothes). Set isUnnecessary to true.
-      9. Provide a very short reason for the analysis in 'analysisReasoning'.
+      3. Infer a specific category (e.g., Food, Transport, Salary, Utilities, Health, Entertainment) in English.
+      4. Determine 'income' (salary, freelance, sold item) or 'expense'. Default to 'expense'.
+      5. If no description is provided, use 'General'.
+      
+      Advanced Analysis Rules:
+      6. 'Harmful' Analysis: Set isHarmful to true if the item is damaging to health OR financial well-being.
+         - Health: Tobacco, Alcohol, Shisha, Drugs.
+         - Financial Risk: Gambling, Betting, Lottery, Casinos.
+      
+      7. 'Unnecessary' Analysis: Set isUnnecessary to true if it is a 'want' not a 'need'.
+         - 'Impulse Buy': Cheap, unplanned, e.g., candy, trinkets.
+         - 'Luxury': Expensive, high-end brands, designer items.
+         - 'Subscription': Recurring entertainment services (Netflix, Spotify) if not essential.
+      
+      8. 'analysisReasoning': Provide a concise reason (max 10 words).
+         - Examples: "Health risk (Tobacco)", "Gambling risk", "Luxury item", "Subscription service".
+      
+      9. 'Recurrence': Detect if the user mentions repetition.
+         - Keywords: "monthly", "every month", "weekly", "daily", "every week".
+         - Return enum: 'daily', 'weekly', 'monthly', or 'none'.
       `,
       config: {
         responseMimeType: "application/json",
@@ -34,6 +47,7 @@ export const parseTransactionText = async (text: string, language: Language): Pr
             description: { type: Type.STRING },
             category: { type: Type.STRING },
             type: { type: Type.STRING, enum: ["income", "expense"] },
+            recurrence: { type: Type.STRING, enum: ["none", "daily", "weekly", "monthly"] },
             isHarmful: { type: Type.BOOLEAN },
             isUnnecessary: { type: Type.BOOLEAN },
             analysisReasoning: { type: Type.STRING }
