@@ -1,16 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { ParseResult } from "../types";
+import { ParseResult, Language } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export const parseTransactionText = async (text: string, language: 'en' | 'ar'): Promise<ParseResult | null> => {
+export const parseTransactionText = async (text: string, language: Language): Promise<ParseResult | null> => {
   try {
+    const langContext = language === 'ar' ? 'Arabic' : (language === 'fr' ? 'French' : 'English');
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Parse the following financial transaction text into structured data.
       Today is ${new Date().toLocaleDateString()}.
       User input: "${text}"
-      User Language Context: ${language === 'ar' ? 'Arabic' : 'English'}
+      User Language Context: ${langContext}
       Default Currency: Moroccan Dirham (DH/MAD).
       
       Rules:
@@ -20,6 +21,9 @@ export const parseTransactionText = async (text: string, language: 'en' | 'ar'):
       4. Determine if it is 'income' (salary, received) or 'expense' (spent, paid).
       5. If the type is ambiguous, default to 'expense'.
       6. If no description is provided, use 'General'.
+      7. ANALYZE: Is this expense 'harmful' to health? (e.g. cigarettes, alcohol, excessive junk food, shisha). Set isHarmful to true.
+      8. ANALYZE: Is this expense 'unnecessary' or a 'want' rather than a 'need'? (e.g. luxury items, impulse buys, games, high-end clothes). Set isUnnecessary to true.
+      9. Provide a very short reason for the analysis in 'analysisReasoning'.
       `,
       config: {
         responseMimeType: "application/json",
@@ -29,9 +33,12 @@ export const parseTransactionText = async (text: string, language: 'en' | 'ar'):
             amount: { type: Type.NUMBER },
             description: { type: Type.STRING },
             category: { type: Type.STRING },
-            type: { type: Type.STRING, enum: ["income", "expense"] }
+            type: { type: Type.STRING, enum: ["income", "expense"] },
+            isHarmful: { type: Type.BOOLEAN },
+            isUnnecessary: { type: Type.BOOLEAN },
+            analysisReasoning: { type: Type.STRING }
           },
-          required: ["amount", "description", "category", "type"]
+          required: ["amount", "description", "category", "type", "isHarmful", "isUnnecessary", "analysisReasoning"]
         }
       }
     });

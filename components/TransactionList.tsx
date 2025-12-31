@@ -1,6 +1,6 @@
 import React from 'react';
 import { Transaction, Language, DICTIONARY, CurrencyCode, CURRENCIES } from '../types';
-import { ArrowDownLeft, ArrowUpRight, Trash2, Edit2, RefreshCw, Layers } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Trash2, Edit2, RefreshCw, Layers, AlertTriangle, PiggyBank } from 'lucide-react';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -69,6 +69,17 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                             {tItem.recurrence && tItem.recurrence !== 'none' && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center gap-1" title={`Repeats ${tItem.recurrence}`}>
                                     <RefreshCw className="w-3 h-3" />
+                                </span>
+                            )}
+                            {/* Analysis Icons */}
+                            {tItem.isHarmful && (
+                                <span className="text-rose-500" title={t.harmful + ": " + tItem.analysisReasoning}>
+                                    <AlertTriangle className="w-4 h-4" />
+                                </span>
+                            )}
+                            {tItem.isUnnecessary && (
+                                <span className="text-orange-500" title={t.unnecessary + ": " + tItem.analysisReasoning}>
+                                    <PiggyBank className="w-4 h-4" />
                                 </span>
                             )}
                         </div>

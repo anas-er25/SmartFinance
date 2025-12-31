@@ -2,28 +2,24 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode } from './types';
 import { parseTransactionText } from './services/geminiService';
 import { exportTransactionsToExcel } from './services/excelService';
+import { createNotificationLinks } from './services/notificationService';
+import { db } from './services/db';
 import { StatsCard } from './components/StatsCard';
 import { TransactionList } from './components/TransactionList';
 import { InputArea } from './components/InputArea';
 import { EditModal } from './components/EditModal';
 import { FilterBar } from './components/FilterBar';
 import { SettingsModal } from './components/SettingsModal';
-import { Wallet, TrendingUp, TrendingDown, Download, BadgeDollarSign, Globe, Settings } from 'lucide-react';
+import { MonthlyReportModal } from './components/MonthlyReportModal';
+import { Wallet, TrendingUp, TrendingDown, Download, BadgeDollarSign, Globe, Settings, FileText, AlertTriangle, MessageCircle, Mail, PieChart } from 'lucide-react';
 
 export const App: React.FC = () => {
   // --- State ---
   const [language, setLanguage] = useState<Language>('en');
   const [currency, setCurrency] = useState<CurrencyCode>('MAD');
   
-  const [categories, setCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('finance_categories');
-    return saved ? JSON.parse(saved) : ['Food', 'Transport', 'Salary', 'Utilities', 'Entertainment', 'Housing', 'Health', 'General'];
-  });
-
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('finance_transactions');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [categories, setCategories] = useState<string[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const [parsingStatus, setParsingStatus] = useState<ParsingStatus>(ParsingStatus.IDLE);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -40,19 +36,24 @@ export const App: React.FC = () => {
   // Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const t = DICTIONARY[language];
   const isRTL = language === 'ar';
 
   // --- Effects ---
+  
+  // Load data from "Database" on mount
   useEffect(() => {
-    localStorage.setItem('finance_transactions', JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem('finance_categories', JSON.stringify(categories));
-  }, [categories]);
+    const loadData = async () => {
+      const txs = await db.transactions.getAll();
+      const cats = await db.categories.getAll();
+      setTransactions(txs);
+      setCategories(cats);
+    };
+    loadData();
+  }, []);
 
   useEffect(() => {
     // Update HTML dir attribute for global RTL support
@@ -62,12 +63,15 @@ export const App: React.FC = () => {
 
   // Recurring Transactions Logic
   useEffect(() => {
-    const checkRecurring = () => {
+    if (transactions.length === 0) return;
+
+    const checkRecurring = async () => {
       const now = new Date();
       let hasChanges = false;
       const newTransactions: Transaction[] = [];
+      const updatedList = [...transactions];
       
-      const updatedTransactions = transactions.map(t => {
+      const updatedTransactions = updatedList.map(t => {
         if (!t.recurrence || t.recurrence === 'none') return t;
         
         // Determine last run date
@@ -81,7 +85,6 @@ export const App: React.FC = () => {
         if (t.recurrence === 'monthly') nextRun.setMonth(nextRun.getMonth() + 1);
 
         // Generate transactions until caught up to today
-        let generatedDate = new Date(lastRun); // temp tracker for loop
         let latestGeneratedStr = t.lastGenerated;
 
         if (nextRun <= now) {
@@ -105,18 +108,14 @@ export const App: React.FC = () => {
       });
 
       if (hasChanges) {
-        setTransactions(prev => [...newTransactions, ...updatedTransactions]);
+        const finalList = [...newTransactions, ...updatedTransactions];
+        setTransactions(finalList);
+        await db.transactions.save(finalList);
       }
     };
 
-    // Run check once on mount (or when transactions list length changes significantly, but careful with loops)
-    // To prevent infinite loop if we update transactions inside, we only run this if we haven't checked recently or on manual trigger.
-    // For simplicity here, we only run it if the transaction count is stable, but that's tricky.
-    // Better: Run only on mount.
-    // Actually, to make it robust in this `useEffect` without dep loop:
-    // We can rely on the fact that we update `lastGenerated`.
-    // Let's just run it once on component mount.
-  }, []); // Empty dependency array = run on mount only.
+    checkRecurring();
+  }, [transactions.length]); // Check when list length changes
 
   // --- Handlers ---
   const handleProcessInput = async (text: string) => {
@@ -127,9 +126,9 @@ export const App: React.FC = () => {
 
     if (result) {
       // Auto-add new category if it doesn't exist? 
-      // User asked to "manage" categories. Let's just add it if it's new to be helpful.
-      if (result.category && !categories.includes(result.category)) {
-          setCategories(prev => [...prev, result.category]);
+      if (result.category) {
+          const updatedCats = await db.categories.add(result.category);
+          setCategories(updatedCats);
       }
 
       const newTransaction: Transaction = {
@@ -139,23 +138,29 @@ export const App: React.FC = () => {
         category: result.category,
         type: result.type,
         date: new Date().toISOString(),
-        recurrence: 'none'
+        recurrence: 'none',
+        isHarmful: result.isHarmful,
+        isUnnecessary: result.isUnnecessary,
+        analysisReasoning: result.analysisReasoning
       };
 
-      setTransactions(prev => [newTransaction, ...prev]);
+      const updatedTxs = await db.transactions.add(newTransaction);
+      setTransactions(updatedTxs);
+      
       setParsingStatus(ParsingStatus.SUCCESS);
       
       setTimeout(() => setParsingStatus(ParsingStatus.IDLE), 2000);
     } else {
-      setErrorMsg(language === 'ar' ? "لم نتمكن من فهم المعاملة. يرجى المحاولة مرة أخرى." : "Could not understand that transaction. Please try again.");
+      setErrorMsg(language === 'ar' ? "لم نتمكن من فهم المعاملة." : "Could not understand that transaction.");
       setParsingStatus(ParsingStatus.ERROR);
       setTimeout(() => setParsingStatus(ParsingStatus.IDLE), 3000);
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm(language === 'ar' ? 'هل أنت متأكد أنك تريد حذف هذه المعاملة؟' : 'Are you sure you want to delete this transaction?')) {
-      setTransactions(prev => prev.filter(t => t.id !== id));
+  const handleDelete = async (id: string) => {
+    if (confirm(t.delete + '?')) {
+      const updated = await db.transactions.delete(id);
+      setTransactions(updated);
     }
   };
 
@@ -164,26 +169,31 @@ export const App: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleUpdateTransaction = (updated: Transaction) => {
-    // If category changed to something new, add it
-    if (updated.category && !categories.includes(updated.category)) {
-        setCategories(prev => [...prev, updated.category]);
+  const handleUpdateTransaction = async (updated: Transaction) => {
+    if (updated.category) {
+        const updatedCats = await db.categories.add(updated.category);
+        setCategories(updatedCats);
     }
-    setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
+    const updatedList = await db.transactions.update(updated);
+    setTransactions(updatedList);
   };
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'en' ? 'ar' : 'en');
+    setLanguage(prev => {
+        if (prev === 'en') return 'ar';
+        if (prev === 'ar') return 'fr';
+        return 'en';
+    });
   };
 
-  const handleAddCategory = (cat: string) => {
-    if (!categories.includes(cat)) {
-        setCategories(prev => [...prev, cat]);
-    }
+  const handleAddCategory = async (cat: string) => {
+    const updated = await db.categories.add(cat);
+    setCategories(updated);
   };
 
-  const handleRemoveCategory = (cat: string) => {
-    setCategories(prev => prev.filter(c => c !== cat));
+  const handleRemoveCategory = async (cat: string) => {
+    const updated = await db.categories.delete(cat);
+    setCategories(updated);
   };
 
   // --- Derived State (Filtering) ---
@@ -205,7 +215,6 @@ export const App: React.FC = () => {
         matchesDate = matchesDate && new Date(t.date) >= new Date(filters.startDate);
       }
       if (filters.endDate) {
-        // Add one day to end date to make it inclusive for the whole day
         const end = new Date(filters.endDate);
         end.setHours(23, 59, 59, 999);
         matchesDate = matchesDate && new Date(t.date) <= end;
@@ -215,7 +224,7 @@ export const App: React.FC = () => {
     });
   }, [transactions, filters]);
 
-  // Calculations based on FILTERED data
+  // Calculations
   const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
     .reduce((acc, t) => acc + t.amount, 0);
@@ -225,6 +234,10 @@ export const App: React.FC = () => {
     .reduce((acc, t) => acc + t.amount, 0);
 
   const currentBalance = totalIncome - totalExpense;
+
+  // Notification Links (Now includes recent bad items)
+  const { waUrl, mailUrl } = createNotificationLinks(currentBalance, currency, filteredTransactions);
+  const showLowBalanceWarning = currentBalance < 500 && transactions.length > 0;
 
   return (
     <div className={`min-h-screen pb-12 bg-slate-50 font-sans ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -242,10 +255,10 @@ export const App: React.FC = () => {
           <div className="flex items-center gap-2">
             <button 
               onClick={toggleLanguage}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-slate-600 hover:text-primary hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-slate-600 hover:text-primary hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium uppercase"
             >
               <Globe className="w-4 h-4" />
-              <span>{language.toUpperCase()}</span>
+              <span>{language}</span>
             </button>
             <button
                 onClick={() => setIsSettingsModalOpen(true)}
@@ -254,20 +267,51 @@ export const App: React.FC = () => {
             >
                 <Settings className="w-5 h-5" />
             </button>
-            <button 
-              onClick={() => exportTransactionsToExcel(filteredTransactions)}
-              className="text-slate-500 hover:text-secondary transition-colors flex items-center text-sm font-medium gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100"
-              title={t.exportXlsx}
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.exportXlsx}</span>
-            </button>
+            <div className="flex gap-1 border-l border-slate-200 pl-2 ml-1">
+                <button 
+                onClick={() => exportTransactionsToExcel(filteredTransactions)}
+                className="p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title={t.exportXlsx}
+                >
+                <Download className="w-5 h-5" />
+                </button>
+                <button 
+                onClick={() => setIsReportModalOpen(true)}
+                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                title={t.monthlyReport}
+                >
+                <PieChart className="w-5 h-5" />
+                </button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 mt-8">
         
+        {/* Low Balance Alert */}
+        {showLowBalanceWarning && (
+            <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-bounce-slow" dir={isRTL ? 'rtl' : 'ltr'}>
+                <div className="flex items-center gap-3">
+                    <AlertTriangle className="w-6 h-6 text-orange-500" />
+                    <div>
+                        <h4 className="font-bold text-orange-800">{t.lowBalance}</h4>
+                        <p className="text-sm text-orange-700">{t.lowBalanceMsg}</p>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <a href={waUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition-colors">
+                        <MessageCircle className="w-4 h-4" />
+                        {t.sendWhatsapp}
+                    </a>
+                    <a href={mailUrl} className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm font-medium transition-colors">
+                        <Mail className="w-4 h-4" />
+                        {t.sendEmail}
+                    </a>
+                </div>
+            </div>
+        )}
+
         {/* Intro / Empty State Prompt */}
         {transactions.length === 0 && (
           <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 mb-8 flex items-start gap-4 animate-fade-in" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -279,7 +323,7 @@ export const App: React.FC = () => {
               <p className="text-indigo-700 mt-1">
                 {t.welcomeText} 
                 <br />
-                {language === 'en' ? 'Try typing:' : 'جرب كتابة:'} <span className="font-mono bg-white px-1 rounded text-indigo-600">{t.welcomeExample}</span>
+                {language === 'en' ? 'Try typing:' : (language === 'ar' ? 'جرب كتابة:' : 'Essayez:')} <span className="font-mono bg-white px-1 rounded text-indigo-600">{t.welcomeExample}</span>
               </p>
             </div>
           </div>
@@ -291,7 +335,7 @@ export const App: React.FC = () => {
             title={t.currentBalance} 
             amount={currentBalance} 
             icon={Wallet} 
-            colorClass="text-primary" 
+            colorClass={currentBalance < 0 ? "text-rose-500" : "text-primary"}
             bgClass="bg-indigo-50"
             currency={currency}
           />
@@ -361,6 +405,14 @@ export const App: React.FC = () => {
         categories={categories}
         onAddCategory={handleAddCategory}
         onRemoveCategory={handleRemoveCategory}
+      />
+
+      <MonthlyReportModal 
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        transactions={transactions}
+        lang={language}
+        currency={currency}
       />
     </div>
   );

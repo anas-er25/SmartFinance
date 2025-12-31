@@ -7,9 +7,12 @@ export interface Transaction {
   date: string;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
   lastGenerated?: string; // Tracks the last date a recurring transaction was generated
+  isHarmful?: boolean;
+  isUnnecessary?: boolean;
+  analysisReasoning?: string;
 }
 
-export type Language = 'en' | 'ar';
+export type Language = 'en' | 'ar' | 'fr';
 
 export type CurrencyCode = 'MAD' | 'USD' | 'EUR' | 'GBP';
 
@@ -54,6 +57,9 @@ export interface ParseResult {
   description: string;
   category: string;
   type: 'income' | 'expense';
+  isHarmful: boolean;
+  isUnnecessary: boolean;
+  analysisReasoning: string;
 }
 
 export const DICTIONARY = {
@@ -76,6 +82,7 @@ export const DICTIONARY = {
     totalIncome: "Total Income",
     totalExpense: "Total Expenses",
     exportXlsx: "Export Excel",
+    exportPdf: "Export PDF",
     searchPlaceholder: "Search description...",
     filterAll: "All Types",
     filterIncome: "Income",
@@ -101,7 +108,21 @@ export const DICTIONARY = {
     daily: "Daily",
     weekly: "Weekly",
     monthly: "Monthly",
-    none: "None"
+    none: "None",
+    lowBalance: "Low Balance Warning!",
+    lowBalanceMsg: "Your balance is below 500. Notify someone?",
+    sendWhatsapp: "WhatsApp",
+    sendEmail: "Email",
+    monthlyReport: "Monthly Report",
+    selectMonth: "Select Month",
+    potentialSavings: "Potential Savings (Unnecessary)",
+    healthRisks: "Health Risk Spending",
+    netBalance: "Net Balance",
+    unnecessary: "Unnecessary",
+    harmful: "Harmful",
+    reportFor: "Report for",
+    close: "Close",
+    analysis: "Spending Analysis"
   },
   ar: {
     title: "إدارة الأموال الذكية",
@@ -122,6 +143,7 @@ export const DICTIONARY = {
     totalIncome: "إجمالي الدخل",
     totalExpense: "إجمالي المصروفات",
     exportXlsx: "تصدير إكسل",
+    exportPdf: "تصدير PDF",
     searchPlaceholder: "بحث في الوصف...",
     filterAll: "كل الأنواع",
     filterIncome: "دخل",
@@ -147,6 +169,81 @@ export const DICTIONARY = {
     daily: "يومي",
     weekly: "أسبوعي",
     monthly: "شهري",
-    none: "لا يوجد"
+    none: "لا يوجد",
+    lowBalance: "تنبيه انخفاض الرصيد!",
+    lowBalanceMsg: "رصيدك أقل من 500. هل تود إرسال تنبيه؟",
+    sendWhatsapp: "واتساب",
+    sendEmail: "بريد إلكتروني",
+    monthlyReport: "التقرير الشهري",
+    selectMonth: "اختر الشهر",
+    potentialSavings: "توفير محتمل (غير ضروري)",
+    healthRisks: "إنفاق ضار بالصحة",
+    netBalance: "صافي الرصيد",
+    unnecessary: "غير ضروري",
+    harmful: "ضار",
+    reportFor: "تقرير شهر",
+    close: "إغلاق",
+    analysis: "تحليل الإنفاق"
+  },
+  fr: {
+    title: "SmartFinance",
+    recordTransaction: "Enregistrer une transaction",
+    placeholder: 'Tapez ou dites "Dépensé 50 DH pour l\'épicerie"',
+    processing: "Traitement...",
+    add: "Ajouter",
+    listening: "Écoute...",
+    recentTransactions: "Transactions Récentes",
+    description: "Description",
+    category: "Catégorie",
+    date: "Date",
+    amount: "Montant",
+    action: "Action",
+    noTransactions: "Aucune transaction enregistrée.",
+    noTransactionsSub: "Votre parcours financier commence par un seul enregistrement.",
+    currentBalance: "Solde Actuel",
+    totalIncome: "Revenus Totaux",
+    totalExpense: "Dépenses Totales",
+    exportXlsx: "Exporter Excel",
+    exportPdf: "Exporter PDF",
+    searchPlaceholder: "Rechercher...",
+    filterAll: "Tous les types",
+    filterIncome: "Revenu",
+    filterExpense: "Dépense",
+    startDate: "Date de début",
+    endDate: "Date de fin",
+    editTransaction: "Modifier Transaction",
+    save: "Enregistrer",
+    cancel: "Annuler",
+    welcomeTitle: "Bienvenue sur SmartFinance!",
+    welcomeText: "Commencez par saisir votre salaire ou solde initial.",
+    welcomeExample: "Solde initial 5000",
+    allCategories: "Toutes Catégories",
+    records: "Enregistrements",
+    update: "Mettre à jour",
+    delete: "Supprimer",
+    settings: "Paramètres",
+    currency: "Devise",
+    categories: "Catégories",
+    addCategory: "Ajouter Catégorie",
+    manageCategories: "Gérer Catégories",
+    recurrence: "Récurrence",
+    daily: "Quotidien",
+    weekly: "Hebdomadaire",
+    monthly: "Mensuel",
+    none: "Aucun",
+    lowBalance: "Attention Solde Bas!",
+    lowBalanceMsg: "Votre solde est inférieur à 500. Notifier quelqu'un?",
+    sendWhatsapp: "WhatsApp",
+    sendEmail: "Email",
+    monthlyReport: "Rapport Mensuel",
+    selectMonth: "Sélectionner le Mois",
+    potentialSavings: "Économies Potentielles",
+    healthRisks: "Risques Santé",
+    netBalance: "Solde Net",
+    unnecessary: "Inutile",
+    harmful: "Nocif",
+    reportFor: "Rapport pour",
+    close: "Fermer",
+    analysis: "Analyse des dépenses"
   }
 };
