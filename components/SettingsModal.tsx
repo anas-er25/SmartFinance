@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CurrencyCode, CURRENCIES, Language, DICTIONARY, Budget, AppSettings } from '../types';
-import { X, Plus, Trash2, Settings, Target, AlertCircle, Database, Upload, Download, CheckCircle, AlertTriangle, Calendar, DollarSign } from 'lucide-react';
+import { X, Plus, Trash2, Settings, Target, AlertCircle, Database, Upload, Download, CheckCircle, AlertTriangle, Calendar, DollarSign, RefreshCcw } from 'lucide-react';
 import { AVAILABLE_ICONS, getIconByKey } from '../utils/icons';
 import { db } from '../services/db';
 
@@ -87,6 +87,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleReset = async () => {
+    if (window.confirm(t.confirmReset)) {
+      await db.system.clearAll();
+      window.location.reload();
+    }
   };
 
   return (
@@ -211,6 +218,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </button>
                  </div>
              </div>
+
+             {/* Reset Button */}
+             <div className="mt-4 pt-4 border-t border-slate-200">
+                <button 
+                  onClick={handleReset}
+                  className="w-full flex items-center justify-center gap-2 p-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100 transition-colors group"
+                >
+                  <RefreshCcw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
+                  <div className="text-left">
+                    <p className="font-bold text-sm leading-none">{t.resetSystem}</p>
+                    <p className="text-[10px] opacity-70 mt-1">{t.resetWarning}</p>
+                  </div>
+                </button>
+             </div>
+
              {restoreStatus === 'success' && (
                  <div className="mt-3 flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded-lg">
                      <CheckCircle className="w-4 h-4" /> {t.successRestore}

@@ -15,6 +15,7 @@ export interface Transaction {
     borrower?: string;
     repaymentDate?: string;
     isRepaid?: boolean;
+    repayments?: Array<{ amount: number; date: string }>;
   };
 }
 
@@ -199,11 +200,17 @@ export const DICTIONARY = {
     salaryAmount: "Salary Amount",
     salaryDay: "Day of Month (1-31)",
     markRepaid: "Mark Repaid",
+    addRepayment: "Add Repayment",
     repaid: "Repaid",
-    confirmRepay: "Has this loan been fully repaid? This will create an income transaction.",
+    confirmRepay: "Enter amount repaid by",
     repaymentFrom: "Repayment from",
     activeLoans: "Active Loans",
-    noActiveLoans: "No active loans."
+    noActiveLoans: "No active loans.",
+    resetSystem: "Reset System",
+    resetWarning: "Permanently delete ALL data.",
+    confirmReset: "Are you sure? This will delete all transactions, goals, and settings. This cannot be undone.",
+    partialRepayment: "Partial Repayment",
+    fullRepayment: "Full Repayment"
   },
   ar: {
     title: "إدارة الأموال الذكية",
@@ -311,11 +318,17 @@ export const DICTIONARY = {
     salaryAmount: "مبلغ الراتب",
     salaryDay: "يوم الشهر (1-31)",
     markRepaid: "تحديد كمدفوع",
+    addRepayment: "إضافة سداد",
     repaid: "تم السداد",
-    confirmRepay: "هل تم سداد هذا القرض بالكامل؟ سيتم إنشاء معاملة دخل.",
+    confirmRepay: "أدخل المبلغ المدفوع من قبل",
     repaymentFrom: "سداد من",
     activeLoans: "القروض النشطة",
-    noActiveLoans: "لا توجد قروض نشطة."
+    noActiveLoans: "لا توجد قروض نشطة.",
+    resetSystem: "إعادة تعيين النظام",
+    resetWarning: "حذف جميع البيانات نهائياً.",
+    confirmReset: "هل أنت متأكد؟ سيؤدي هذا إلى حذف جميع المعاملات والأهداف والإعدادات. لا يمكن التراجع عن هذه الخطوة.",
+    partialRepayment: "سداد جزئي",
+    fullRepayment: "سداد كامل"
   },
   fr: {
     title: "SmartFinance",
@@ -423,10 +436,16 @@ export const DICTIONARY = {
     salaryAmount: "Montant Salaire",
     salaryDay: "Jour du Mois (1-31)",
     markRepaid: "Marquer comme remboursé",
+    addRepayment: "Ajouter Remboursement",
     repaid: "Remboursé",
-    confirmRepay: "Ce prêt a-t-il été entièrement remboursé ? Cela créera une transaction de revenu.",
+    confirmRepay: "Entrez le montant remboursé par",
     repaymentFrom: "Remboursement de",
     activeLoans: "Prêts Actifs",
-    noActiveLoans: "Aucun prêt actif."
+    noActiveLoans: "Aucun prêt actif.",
+    resetSystem: "Réinitialiser",
+    resetWarning: "Supprimer TOUTES les données.",
+    confirmReset: "Êtes-vous sûr ? Cela supprimera toutes les transactions, objectifs et paramètres. Cette action est irréversible.",
+    partialRepayment: "Remboursement Partiel",
+    fullRepayment: "Remboursement Complet"
   }
 };

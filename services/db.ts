@@ -174,6 +174,14 @@ export const db = {
               console.error("Restore failed", e);
               return false;
           }
+      },
+      clearAll: async (): Promise<void> => {
+          localStorage.removeItem(TRANSACTIONS_KEY);
+          localStorage.removeItem(CATEGORIES_KEY);
+          localStorage.removeItem(BUDGETS_KEY);
+          localStorage.removeItem(SETTINGS_KEY);
+          localStorage.removeItem(CAT_ICONS_KEY);
+          localStorage.removeItem(GOALS_KEY);
       }
   }
 };
