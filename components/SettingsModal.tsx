@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CurrencyCode, CURRENCIES, Language, DICTIONARY, Budget, AppSettings } from '../types';
-import { X, Plus, Trash2, Settings, Target, AlertCircle, Database, Upload, Download, CheckCircle, AlertTriangle, Calendar, DollarSign, RefreshCcw } from 'lucide-react';
+import { X, Plus, Trash2, Settings, Target, AlertCircle, Database, Upload, Download, CheckCircle, AlertTriangle, Calendar, DollarSign, RefreshCcw, Sparkles } from 'lucide-react';
 import { AVAILABLE_ICONS, getIconByKey } from '../utils/icons';
 import { db } from '../services/db';
 
@@ -94,6 +94,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       await db.system.clearAll();
       window.location.reload();
     }
+  };
+
+  const handleFillDemo = async () => {
+      if (window.confirm(t.demoConfirmation)) {
+          await db.system.fillDemoData();
+          window.location.reload();
+      }
   };
 
   return (
@@ -219,8 +226,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                  </div>
              </div>
 
-             {/* Reset Button */}
-             <div className="mt-4 pt-4 border-t border-slate-200">
+             {/* Action Buttons */}
+             <div className="mt-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
+                <button 
+                  onClick={handleFillDemo}
+                  className="w-full flex items-center justify-center gap-2 p-3 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl hover:bg-indigo-100 transition-colors group"
+                >
+                  <Sparkles className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span className="font-bold text-sm">{t.fillDemoData}</span>
+                </button>
+
                 <button 
                   onClick={handleReset}
                   className="w-full flex items-center justify-center gap-2 p-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100 transition-colors group"

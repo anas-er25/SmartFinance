@@ -213,6 +213,71 @@ export const db = {
           localStorage.removeItem(CAT_ICONS_KEY);
           localStorage.removeItem(GOALS_KEY);
           localStorage.removeItem(QUICK_ADDS_KEY);
+      },
+      fillDemoData: async (): Promise<void> => {
+          // 1. Ensure categories and icons exist
+          const cats = ['Salary', 'Food', 'Transport', 'Utilities', 'Entertainment', 'Shopping', 'Health', 'Loans'];
+          for (const c of cats) await db.categories.add(c);
+          
+          await db.categoryIcons.set('Salary', 'work');
+          await db.categoryIcons.set('Food', 'food');
+          await db.categoryIcons.set('Transport', 'car');
+          await db.categoryIcons.set('Utilities', 'utilities');
+          await db.categoryIcons.set('Entertainment', 'entertainment');
+          await db.categoryIcons.set('Shopping', 'shopping');
+          await db.categoryIcons.set('Health', 'health');
+          await db.categoryIcons.set('Loans', 'bank');
+
+          // 2. Add Transactions relative to today
+          const today = new Date();
+          const d = (offset: number) => {
+              const date = new Date(today);
+              date.setDate(today.getDate() - offset);
+              return date.toISOString();
+          };
+
+          const demoTxs: Transaction[] = [
+              { id: crypto.randomUUID(), amount: 5000, description: 'Monthly Salary', category: 'Salary', type: 'income', date: d(20), recurrence: 'monthly', isHarmful: false, isUnnecessary: false },
+              { id: crypto.randomUUID(), amount: 150, description: 'Weekly Groceries', category: 'Food', type: 'expense', date: d(18), recurrence: 'weekly', isHarmful: false, isUnnecessary: false },
+              { id: crypto.randomUUID(), amount: 45, description: 'Uber Ride', category: 'Transport', type: 'expense', date: d(15), isHarmful: false, isUnnecessary: false },
+              { id: crypto.randomUUID(), amount: 200, description: 'Dinner with Friends', category: 'Entertainment', type: 'expense', date: d(10), isHarmful: false, isUnnecessary: true, analysisReasoning: "Dining out frequently is a luxury." },
+              { id: crypto.randomUUID(), amount: 80, description: 'Pharmacy', category: 'Health', type: 'expense', date: d(5), isHarmful: false, isUnnecessary: false },
+              { id: crypto.randomUUID(), amount: 1200, description: 'New Headphones', category: 'Shopping', type: 'expense', date: d(2), isHarmful: false, isUnnecessary: true, analysisReasoning: "Impulse buy." },
+              { id: crypto.randomUUID(), amount: 50, description: 'Cigarettes', category: 'Health', type: 'expense', date: d(1), isHarmful: true, isUnnecessary: true, analysisReasoning: "Damaging to health." },
+              { 
+                  id: crypto.randomUUID(), 
+                  amount: 300, 
+                  description: 'Lent to John', 
+                  category: 'Loans', 
+                  type: 'expense', 
+                  date: d(12), 
+                  isHarmful: false, 
+                  isUnnecessary: false,
+                  loanDetails: {
+                      isLoan: true,
+                      borrower: 'John',
+                      repaymentDate: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Due next week
+                      isRepaid: false,
+                      repayments: []
+                  }
+              }
+          ];
+
+          for (const tx of demoTxs) await db.transactions.add(tx);
+
+          // 3. Set Budgets
+          await db.budgets.set('Food', 1000);
+          await db.budgets.set('Entertainment', 500);
+
+          // 4. Set Goals
+          await db.goals.add({
+              id: crypto.randomUUID(),
+              name: 'Vacation Fund',
+              targetAmount: 10000,
+              currentAmount: 1500,
+              color: 'bg-teal-500',
+              icon: 'plane'
+          });
       }
   }
 };

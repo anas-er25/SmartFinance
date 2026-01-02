@@ -224,7 +224,9 @@ export const DICTIONARY = {
     shortcutLabel: "Label (e.g. Coffee)",
     shortcutDesc: "Description for AI",
     shortcutCategory: "Default Category",
-    create: "Create"
+    create: "Create",
+    fillDemoData: "Fill Demo Data",
+    demoConfirmation: "This will add sample transactions and budgets. Continue?"
   },
   ar: {
     title: "إدارة الأموال الذكية",
@@ -347,7 +349,9 @@ export const DICTIONARY = {
     shortcutLabel: "العنوان (مثل: قهوة)",
     shortcutDesc: "وصف للذكاء الاصطناعي",
     shortcutCategory: "الفئة الافتراضية",
-    create: "إنشاء"
+    create: "إنشاء",
+    fillDemoData: "ملء بيانات تجريبية",
+    demoConfirmation: "سيقوم هذا بإضافة معاملات وميزانيات تجريبية. متابعة؟"
   },
   fr: {
     title: "SmartFinance",
@@ -470,6 +474,8 @@ export const DICTIONARY = {
     shortcutLabel: "Titre (ex: Café)",
     shortcutDesc: "Description pour l'IA",
     shortcutCategory: "Catégorie",
-    create: "Créer"
+    create: "Créer",
+    fillDemoData: "Remplir Données Démo",
+    demoConfirmation: "Ceci ajoutera des transactions et budgets exemples. Continuer ?"
   }
 };
