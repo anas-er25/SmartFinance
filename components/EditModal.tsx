@@ -82,6 +82,7 @@ export const EditModal: React.FC<EditModalProps> = ({ transaction, isOpen, onClo
                     value={formData.category}
                     onChange={e => setFormData({...formData, category: e.target.value})}
                     className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                    placeholder="Select or type to create..."
                 />
                 <datalist id="category-options">
                     {categories.map(c => <option key={c} value={c} />)}

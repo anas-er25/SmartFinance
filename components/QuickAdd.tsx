@@ -152,14 +152,19 @@ export const QuickAdd: React.FC<QuickAddProps> = ({
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t.category}</label>
-                                <select
-                                    value={newCategory}
-                                    onChange={e => setNewCategory(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm bg-white"
-                                >
-                                    <option value="">-- None --</option>
-                                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        list="qa-category-options"
+                                        value={newCategory}
+                                        onChange={e => setNewCategory(e.target.value)}
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
+                                        placeholder="Select or type..."
+                                    />
+                                    <datalist id="qa-category-options">
+                                        {categories.map(c => <option key={c} value={c} />)}
+                                    </datalist>
+                                </div>
                             </div>
                         </div>
                          <div>

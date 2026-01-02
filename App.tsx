@@ -335,6 +335,10 @@ export const App: React.FC = () => {
   };
 
   const handleAddQuickItem = async (item: QuickAddItem) => {
+    if (item.category) {
+        const updatedCats = await db.categories.add(item.category);
+        setCategories(updatedCats);
+    }
     const updated = await db.quickAdds.add(item);
     setQuickAddItems(updated);
   };
