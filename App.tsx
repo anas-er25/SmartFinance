@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode, Budget, AppSettings, SavingsGoal, ParseResult } from './types';
+import { Transaction, ParsingStatus, Language, FilterState, DICTIONARY, CurrencyCode, Budget, AppSettings, SavingsGoal, ParseResult, QuickAddItem } from './types';
 import { parseTransactionText, parseTransactionImage } from './services/geminiService';
 import { exportTransactionsToExcel } from './services/excelService';
 import { createNotificationLinks } from './services/notificationService';
@@ -30,6 +30,7 @@ export const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const [quickAddItems, setQuickAddItems] = useState<QuickAddItem[]>([]);
   const [settings, setSettings] = useState<AppSettings>({ lowBalanceThreshold: 500 });
   const [parsingStatus, setParsingStatus] = useState<ParsingStatus>(ParsingStatus.IDLE);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export const App: React.FC = () => {
       const bgs = await db.budgets.getAll();
       const stg = await db.settings.get();
       const gls = await db.goals.getAll();
+      const qas = await db.quickAdds.getAll();
       
       setTransactions(txs);
       setCategories(cats);
@@ -67,6 +69,7 @@ export const App: React.FC = () => {
       setBudgets(bgs);
       setSettings(stg);
       setGoals(gls);
+      setQuickAddItems(qas);
       
       if (txs.length === 0) {
         setIsGuideModalOpen(true);
@@ -331,11 +334,27 @@ export const App: React.FC = () => {
       }
   };
 
+  const handleAddQuickItem = async (item: QuickAddItem) => {
+    const updated = await db.quickAdds.add(item);
+    setQuickAddItems(updated);
+  };
+
+  const handleDeleteQuickItem = async (id: string) => {
+    if(window.confirm(t.delete + '?')) {
+        const updated = await db.quickAdds.delete(id);
+        setQuickAddItems(updated);
+    }
+  };
+
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       if (t.loanDetails?.isLoan && t.loanDetails.isRepaid && !filters.includeRepaid) return false;
-      const matchesSearch = t.description.toLowerCase().includes(filters.search.toLowerCase()) || 
-                            t.category.toLowerCase().includes(filters.search.toLowerCase());
+      
+      const searchLower = filters.search.toLowerCase();
+      const matchesSearch = t.description.toLowerCase().includes(searchLower) || 
+                            t.category.toLowerCase().includes(searchLower) ||
+                            (t.loanDetails?.borrower?.toLowerCase().includes(searchLower) ?? false);
+                            
       const matchesType = filters.type === 'all' || t.type === filters.type;
       const matchesCategory = filters.category === '' || t.category === filters.category;
       let matchesDate = true;
@@ -450,7 +469,15 @@ export const App: React.FC = () => {
         <SavingsGoals goals={goals} onAddGoal={handleAddGoal} onUpdateGoal={handleUpdateGoal} onDeleteGoal={handleDeleteGoal} lang={language} currency={currency} />
 
         <div className="bg-white p-6 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 mb-8 sticky top-6 z-20" dir={isRTL ? 'rtl' : 'ltr'}>
-            <QuickAdd onQuickAdd={handleProcessInput} lang={language} />
+            <QuickAdd 
+                quickAddItems={quickAddItems}
+                onQuickAdd={handleProcessInput} 
+                onAddQuickItem={handleAddQuickItem}
+                onDeleteQuickItem={handleDeleteQuickItem}
+                categories={categories}
+                categoryIcons={categoryIcons}
+                lang={language} 
+            />
             <InputArea onProcess={handleProcessInput} onImageProcess={handleImageInput} status={parsingStatus} lang={language} />
         </div>
 

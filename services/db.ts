@@ -1,4 +1,4 @@
-import { Transaction, Budget, AppSettings, SavingsGoal } from '../types';
+import { Transaction, Budget, AppSettings, SavingsGoal, QuickAddItem } from '../types';
 
 const TRANSACTIONS_KEY = 'finance_transactions';
 const CATEGORIES_KEY = 'finance_categories';
@@ -6,8 +6,15 @@ const BUDGETS_KEY = 'finance_budgets';
 const SETTINGS_KEY = 'finance_settings';
 const CAT_ICONS_KEY = 'finance_category_icons';
 const GOALS_KEY = 'finance_goals';
+const QUICK_ADDS_KEY = 'finance_quick_adds';
 
-// This service mimics an async database to allow for easy future migration to a real backend.
+const DEFAULT_QUICK_ADDS: QuickAddItem[] = [
+    { id: '1', label: 'Coffee', text: 'Spent 20 on Coffee', amount: 20, category: 'Coffee', colorClass: 'text-amber-600 bg-amber-50 border-amber-100 hover:bg-amber-100' },
+    { id: '2', label: 'Lunch', text: 'Spent 50 on Lunch', amount: 50, category: 'Food', colorClass: 'text-orange-600 bg-orange-50 border-orange-100 hover:bg-orange-100' },
+    { id: '3', label: 'Transport', text: 'Spent 30 on Transport', amount: 30, category: 'Transport', colorClass: 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100' },
+    { id: '4', label: 'Groceries', text: 'Spent 100 on Groceries', amount: 100, category: 'Groceries', colorClass: 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100' },
+];
+
 export const db = {
   transactions: {
     getAll: async (): Promise<Transaction[]> => {
@@ -139,6 +146,27 @@ export const db = {
         return updated;
     }
   },
+  quickAdds: {
+    getAll: async (): Promise<QuickAddItem[]> => {
+        const data = localStorage.getItem(QUICK_ADDS_KEY);
+        return data ? JSON.parse(data) : DEFAULT_QUICK_ADDS;
+    },
+    save: async (items: QuickAddItem[]): Promise<void> => {
+        localStorage.setItem(QUICK_ADDS_KEY, JSON.stringify(items));
+    },
+    add: async (item: QuickAddItem): Promise<QuickAddItem[]> => {
+        const current = await db.quickAdds.getAll();
+        const updated = [...current, item];
+        await db.quickAdds.save(updated);
+        return updated;
+    },
+    delete: async (id: string): Promise<QuickAddItem[]> => {
+        const current = await db.quickAdds.getAll();
+        const updated = current.filter(i => i.id !== id);
+        await db.quickAdds.save(updated);
+        return updated;
+    }
+  },
   settings: {
     get: async (): Promise<AppSettings> => {
       const data = localStorage.getItem(SETTINGS_KEY);
@@ -156,7 +184,8 @@ export const db = {
               categoryIcons: await db.categoryIcons.getAll(),
               budgets: await db.budgets.getAll(),
               settings: await db.settings.get(),
-              goals: await db.goals.getAll()
+              goals: await db.goals.getAll(),
+              quickAdds: await db.quickAdds.getAll()
           };
           return JSON.stringify(data, null, 2);
       },
@@ -169,6 +198,7 @@ export const db = {
               if (data.budgets) await db.budgets.save(data.budgets);
               if (data.settings) await db.settings.save(data.settings);
               if (data.goals) await db.goals.save(data.goals);
+              if (data.quickAdds) await db.quickAdds.save(data.quickAdds);
               return true;
           } catch (e) {
               console.error("Restore failed", e);
@@ -182,6 +212,7 @@ export const db = {
           localStorage.removeItem(SETTINGS_KEY);
           localStorage.removeItem(CAT_ICONS_KEY);
           localStorage.removeItem(GOALS_KEY);
+          localStorage.removeItem(QUICK_ADDS_KEY);
       }
   }
 };

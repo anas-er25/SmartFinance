@@ -19,6 +19,15 @@ export interface Transaction {
   };
 }
 
+export interface QuickAddItem {
+  id: string;
+  label: string;
+  text: string; // The command text sent to AI
+  amount?: number;
+  category?: string;
+  colorClass: string;
+}
+
 export interface SavingsGoal {
   id: string;
   name: string;
@@ -210,7 +219,12 @@ export const DICTIONARY = {
     resetWarning: "Permanently delete ALL data.",
     confirmReset: "Are you sure? This will delete all transactions, goals, and settings. This cannot be undone.",
     partialRepayment: "Partial Repayment",
-    fullRepayment: "Full Repayment"
+    fullRepayment: "Full Repayment",
+    addNewShortcut: "Add Shortcut",
+    shortcutLabel: "Label (e.g. Coffee)",
+    shortcutDesc: "Description for AI",
+    shortcutCategory: "Default Category",
+    create: "Create"
   },
   ar: {
     title: "إدارة الأموال الذكية",
@@ -328,7 +342,12 @@ export const DICTIONARY = {
     resetWarning: "حذف جميع البيانات نهائياً.",
     confirmReset: "هل أنت متأكد؟ سيؤدي هذا إلى حذف جميع المعاملات والأهداف والإعدادات. لا يمكن التراجع عن هذه الخطوة.",
     partialRepayment: "سداد جزئي",
-    fullRepayment: "سداد كامل"
+    fullRepayment: "سداد كامل",
+    addNewShortcut: "إضافة اختصار",
+    shortcutLabel: "العنوان (مثل: قهوة)",
+    shortcutDesc: "وصف للذكاء الاصطناعي",
+    shortcutCategory: "الفئة الافتراضية",
+    create: "إنشاء"
   },
   fr: {
     title: "SmartFinance",
@@ -446,6 +465,11 @@ export const DICTIONARY = {
     resetWarning: "Supprimer TOUTES les données.",
     confirmReset: "Êtes-vous sûr ? Cela supprimera toutes les transactions, objectifs et paramètres. Cette action est irréversible.",
     partialRepayment: "Remboursement Partiel",
-    fullRepayment: "Remboursement Complet"
+    fullRepayment: "Remboursement Complet",
+    addNewShortcut: "Ajouter Raccourci",
+    shortcutLabel: "Titre (ex: Café)",
+    shortcutDesc: "Description pour l'IA",
+    shortcutCategory: "Catégorie",
+    create: "Créer"
   }
 };
